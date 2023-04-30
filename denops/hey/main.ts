@@ -15,7 +15,6 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
   const model = new ChatOpenAI({
     modelName: "gpt-3.5-turbo",
     streaming: true,
-    verbose: true,
     callbacks: [
       {
         async handleLLMNewToken(token: string) {
