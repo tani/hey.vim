@@ -2,6 +2,10 @@
 
 hey.vim is a Vim plugin that utilizes the OpenAI API to edit text.
 
+
+https://user-images.githubusercontent.com/5019902/235354741-b3ec948c-73af-4121-90e9-bd5e2d159852.mp4
+
+
 ## Installation
 
 This plugin is depends on [vim-denops/denops.vim](https://github.com/vim-denops/denops.vim).
