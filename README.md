@@ -15,7 +15,7 @@ Plug 'vim-denops/denops.vim'
 Plug 'tani/hey.vim'
 ```
 
-You can configureAI API key it as `OPENAI_API_KEY environment variable.
+You need to set OpenAI API key as `OPENAI_API_KEY` environment variable.
 
 ## Commands
 
