@@ -32,8 +32,8 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
 
   const systemPrompt = outdent`
     Act a professional code/ prose writer for:
-    - you write code (e.g., code completion)
-    - helping you (e.g., grammar/ spelling correction)
+    - helping human to write code (e.g., auto-completion)
+    - helping human to write prose (e.g., grammar/ spelling correction)
 
     The condition of the answer is:
     - Ask no question regarding the request.
