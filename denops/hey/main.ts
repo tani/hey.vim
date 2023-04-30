@@ -2,6 +2,7 @@ import { ChatOpenAI } from "https://esm.sh/langchain/chat_models/openai";
 import { HumanChatMessage, SystemChatMessage } from "https://esm.sh/langchain/schema";
 
 import { Denops } from "https://lib.deno.dev/x/denops_std@v4/mod.ts";
+import * as helper from "https://lib.deno.dev/x/denops_std@v4/helper/mod.ts";
 import * as vars from "https://lib.deno.dev/x/denops_std@v4/variable/mod.ts";
 import * as fn from "https://lib.deno.dev/x/denops_std@v4/function/mod.ts";
 import outdent from 'https://lib.deno.dev/x/outdent@v0.8.x/mod.ts';
@@ -64,4 +65,30 @@ export async function main(denops: Denops) {
       hey(denops, ...args);
     }
   };
+  await helper.execute(denops, outdent`
+    function! Hey(prompt) range abort
+      let s:seq_curs = get(s:, "seq_curs", [])
+      call add(s:seq_curs, undotree()["seq_cur"])
+      let s:firstline = a:firstline
+      let s:lastline = a:lastline
+      let s:prompt = a:prompt
+      call denops#notify("${denops.name}", "hey", [s:firstline, s:lastline, s:prompt])
+    endfunction
+    command! -nargs=1 -range Hey <line1>,<line2>call Hey(<q-args>)
+
+    function! HeyUndo() abort
+      execute 'undo' s:seq_curs[-1]
+      call remove(s:seq_curs, -1)
+    endfunction
+    command! HeyUndo call HeyUndo()
+    map <Plug>HeyUndo <Cmd>HeyUndo<CR>
+
+    function! HeyAgain() abort
+      call add(s:seq_curs, undotree()["seq_cur"])
+      execute 'undo' s:seq_curs[-2]
+      call denops#notify("${denops.name}", "hey", [s:firstline, s:lastline, s:prompt])
+    endfunction
+    command! HeyAgain call HeyAgain()
+    map <Plug>HeyAgain <Cmd>HeyAgain<CR>
+  `)
 }
