@@ -8,8 +8,10 @@ This plugin is depends on [vim-denops/denops.vim](https://github.com/vim-denops/
 
 ```vim
 Plug 'vim-denops/denops.vim'
-Plug 'tnai/hey.vim'
+Plug 'tani/hey.vim'
 ```
+
+You need to set the OpenAI API key to the environment variable `OPENAI_API_KEY`.
 
 ## Commands
 
