@@ -2,6 +2,7 @@ import { ChatOpenAI } from "https://esm.sh/langchain/chat_models/openai";
 import { HumanChatMessage, SystemChatMessage } from "https://esm.sh/langchain/schema";
 
 import { Denops } from "https://lib.deno.dev/x/denops_std@v4/mod.ts";
+import * as vars from "https://lib.deno.dev/x/denops_std@v4/variable/mod.ts";
 import * as fn from "https://lib.deno.dev/x/denops_std@v4/function/mod.ts";
 import outdent from 'https://lib.deno.dev/x/outdent@v0.8.x/mod.ts';
 
@@ -29,7 +30,7 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
   });
 
   const systemPrompt = outdent`
-    Act a professional code/ prose writer for:
+    Act a professional ${ await vars.o.get(denops, "filetype") } code/ prose writer for:
     - helping human to write code (e.g., auto-completion)
     - helping human to write prose (e.g., grammar/ spelling correction)
 
