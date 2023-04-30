@@ -2,7 +2,6 @@ import { ChatOpenAI } from "https://esm.sh/langchain/chat_models/openai";
 import { HumanChatMessage, SystemChatMessage } from "https://esm.sh/langchain/schema";
 
 import { Denops } from "https://lib.deno.dev/x/denops_std@v4/mod.ts";
-import { g } from "https://lib.deno.dev/x/denops_std@v4/variable/mod.ts";
 import * as fn from "https://lib.deno.dev/x/denops_std@v4/function/mod.ts";
 import outdent from 'https://lib.deno.dev/x/outdent@v0.8.x/mod.ts';
 
