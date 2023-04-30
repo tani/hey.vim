@@ -15,7 +15,7 @@ Plug 'tnai/hey.vim'
 
 - `[range]Hey {prompt}` - Edit text with OpenAI API.
 - `HeyAgain` - Edit text with the same prompt as the previous one.
-- 'HeyUndo' - Undo the last edit.
+- `HeyUndo` - Undo the last edit.
 
 ## Keymaps
 
