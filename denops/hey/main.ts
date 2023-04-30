@@ -15,7 +15,8 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
   await fn.setcursorcharpos(denops, firstline, 0);
 
   const model = new ChatOpenAI({
-    modelName: "gpt-3.5-turbo",
+    modelName: await vars.g.get(denops, "hey_model_name", "gpt-3.5-turbo"),
+    verbose: await vars.g.get(denops, "hey_verbose", false),
     streaming: true,
     callbacks: [
       {
