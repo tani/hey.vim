@@ -1,11 +1,13 @@
-import { ChatOpenAI } from "https://esm.sh/langchain/chat_models/openai";
-import { HumanChatMessage, SystemChatMessage } from "https://esm.sh/langchain/schema";
+import { ChatOpenAI } from "npm:langchain@v0.0.68/chat_models/openai";
+import { HumanChatMessage, SystemChatMessage } from "npm:langchain@v0.0.68/schema";
+import { Mutex } from "npm:async-mutex@v0.4.0";
 
-import { Denops } from "https://lib.deno.dev/x/denops_std@v4/mod.ts";
-import * as helper from "https://lib.deno.dev/x/denops_std@v4/helper/mod.ts";
-import * as vars from "https://lib.deno.dev/x/denops_std@v4/variable/mod.ts";
-import * as fn from "https://lib.deno.dev/x/denops_std@v4/function/mod.ts";
-import outdent from 'https://lib.deno.dev/x/outdent@v0.8.x/mod.ts';
+import { Denops } from "https://deno.land/x/denops_std@v4.0.0/mod.ts";
+import * as helper from "https://deno.land/x/denops_std@v4.0.0/helper/mod.ts";
+import * as vars from "https://deno.land/x/denops_std@v4.0.0/variable/mod.ts";
+import * as fn from "https://deno.land/x/denops_std@v4.0.0/function/mod.ts";
+import outdent from 'https://deno.land/x/outdent@v0.8.0/mod.ts';
+
 /**
  * The `hey` function sends a message to the ChatOpenAI model registered with Denops.
  *
@@ -16,10 +18,11 @@ import outdent from 'https://lib.deno.dev/x/outdent@v0.8.x/mod.ts';
  * @returns {Promise<void>}
  */
 async function hey(denops: Denops, firstline: number, lastline: number, request: string) {
-  // const precontext = (await fn.getline(denops, Math.max(firstline - 20, 0), firstline - 1)).join("\n");
-  // const postcontext = (await fn.getline(denops, lastline + 1, lastline + 20)).join("\n");
+  const precontext = (await fn.getline(denops, Math.max(firstline - 20, 0), firstline - 1)).join("\n");
+  const postcontext = (await fn.getline(denops, lastline + 1, lastline + 20)).join("\n");
   const context = (await fn.getline(denops, firstline, lastline)).join("\n");
   const indent = " ".repeat(await fn.indent(denops, firstline));
+  const mutex = new Mutex();
   await fn.deletebufline(denops, "%", firstline+1, lastline);
   await fn.setline(denops, firstline, [indent]);
   await fn.setcursorcharpos(denops, firstline, 0);
@@ -31,11 +34,16 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
     callbacks: [
       {
         async handleLLMNewToken(token: string) {
-          const [bufn, lnum, col, off] = await fn.getcursorcharpos(denops);
-          const lines = (await fn.getline(denops, lnum) + token.replace("\n", "\n"+indent)).split("\n");
-          await fn.append(denops, lnum, Array(lines.length - 1).fill(""));
-          await fn.setline(denops, lnum, lines);
-          await fn.setcursorcharpos(denops, lnum + lines.length - 1, col);
+          await mutex.runExclusive(async () => {
+            const crow = await fn.line(denops, ".");
+            const cline = await fn.getline(denops, crow);
+            const lines = (cline + token).replace("\n", "\n"+indent).split("\n");
+            const nrow = crow + lines.length - 1;
+            const ncol = Array.from(new Intl.Segmenter().segment(lines.at(-1))).length;
+            await fn.append(denops, crow, Array(lines.length - 1).fill(""));
+            await fn.setline(denops, crow, lines);
+            await fn.setcursorcharpos(denops, nrow, ncol);
+          });
         }
       }
     ]
@@ -53,16 +61,26 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
     - Must generate the concise text for any input.
 
     The following is the example of the input and the output.
-    <ExampleInput>
-    <Request>${ request }</Request>
-    <Context>${ outdent.string("\n"+context) }</Context>
-    </ExampleInput>
-    <ExampleOutput>${ outdent.string("\n"+context) }</ExampleOutput>
+    <Input>
+      <Request>${ request }</Request>
+      <PreContext>${ outdent.string("\n"+precontext) }</PreContext>
+      <Context>${ outdent.string("\n"+context) }</Context>
+      <PostContext>${ outdent.string("\n"+postcontext) }</PostContext>
+    </Input>
+    <Output>${ outdent.string("\n"+context) }</Output>
   `;
 
   const userPrompt = outdent`
-    <Request>${ request }</Request>
-    <Context>${ outdent.string("\n"+context) }</Context>
+    Please fill out the output.
+    <Input>
+      <Request>${ request }</Request>
+      <PreContext>${ outdent.string("\n"+precontext) }</PreContext>
+      <Context>${ outdent.string("\n"+context) }</Context>
+      <PostContext>${ outdent.string("\n"+postcontext) }</PostContext>
+    <Input>
+    <Output>
+
+    </Output>
   `;
 
   model.call([
