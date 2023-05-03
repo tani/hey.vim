@@ -1,6 +1,6 @@
-import { ChatOpenAI } from "npm:langchain@0.0.68/chat_models/openai";
-import { HumanChatMessage, SystemChatMessage } from "npm:langchain@0.0.68/schema";
-import { Mutex } from "npm:async-mutex@0.4.0";
+import { ChatOpenAI } from "https://esm.sh/langchain@0.0.68/chat_models/openai";
+import { HumanChatMessage, SystemChatMessage } from "https://esm.sh/langchain@0.0.68/schema";
+import { Mutex } from "https://esm.sh/async-mutex@0.4.0";
 
 import { Denops } from "https://deno.land/x/denops_std@v4.0.0/mod.ts";
 import * as helper from "https://deno.land/x/denops_std@v4.0.0/helper/mod.ts";
