@@ -22,11 +22,13 @@ You need to set OpenAI API key as `OPENAI_API_KEY` environment variable.
 - `[range]Hey {prompt}` - Edit text with OpenAI API.
 - `HeyAgain` - Edit text with the same prompt as the previous one.
 - `HeyUndo` - Undo the last edit.
+- `HeyAbort` - Abort the current edit.
 
 ## Keymaps
 
 - `<Plug>HeyUndo` - Undo the last edit.
 - `<Plug>HeyAgain` - Edit text with the same prompt as the previous one.
+- `<Plug>HeyAbort` - Abort the current edit.
 
 ## License
 

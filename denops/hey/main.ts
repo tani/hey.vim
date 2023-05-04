@@ -15,9 +15,10 @@ import outdent from 'https://deno.land/x/outdent@v0.8.0/mod.ts';
  * @param {number} firstline - The first line number of the range to send
  * @param {number} lastline - The last line number of the range to send
  * @param {string} request - The input text to send to the model
+ * @param {AbortController} controller - The AbortController to abort the request
  * @returns {Promise<void>}
  */
-async function hey(denops: Denops, firstline: number, lastline: number, request: string) {
+async function hey(denops: Denops, firstline: number, lastline: number, request: string, controller: AbortController) {
   const precontext = (await fn.getline(denops, Math.max(firstline - 20, 0), firstline - 1)).join("\n");
   const postcontext = (await fn.getline(denops, lastline + 1, lastline + 20)).join("\n");
   const context = (await fn.getline(denops, firstline, lastline)).join("\n");
@@ -83,42 +84,67 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
     </Output>
   `;
 
-  model.call([
-    new SystemChatMessage(systemPrompt),
-    new HumanChatMessage(userPrompt)
-  ]);
+  try {
+    await model.call([
+      new SystemChatMessage(systemPrompt),
+      new HumanChatMessage(userPrompt)
+    ], { options: { signal: controller.signal }});
+  } catch (e) {
+    console.log(e);
+  }
 }
 
 export async function main(denops: Denops) {
+  let controller: AbortController | undefined;
+  let seq_curs: number[] = [];
+  let myfirstline: number = 0;
+  let mylastline: number = 0;
+  let myprompt: string = ""
+
   denops.dispatcher = {
-    hey(...args: any[]) {
-      hey(denops, ...args);
+    async hey(afistline: number, alastline: number, aprompt: string) {
+      controller = new AbortController();
+      seq_curs.push((await fn.undotree(denops)).seq_cur);
+      myfirstline = afistline;
+      mylastline = alastline;
+      myprompt = aprompt;
+      hey(denops, myfirstline, mylastline, myprompt, controller);
+    },
+    async undo() {
+      denops.cmd(`undo ${seq_curs.pop()}`);
+    },
+    async again() {
+      seq_curs.push((await fn.undotree(denops)).seq_cur);
+      denops.cmd(`undo ${seq_curs.at(-2)}`);
+      hey(denops, myfirstline, mylastline, myprompt, controller);
+    },
+    abort() {
+      controller?.abort();
     }
   };
   await helper.execute(denops, outdent`
     function! Hey(prompt) range abort
-      let s:seq_curs = get(s:, "seq_curs", [])
-      call add(s:seq_curs, undotree()["seq_cur"])
-      let s:firstline = a:firstline
-      let s:lastline = a:lastline
-      let s:prompt = a:prompt
-      call denops#notify("${denops.name}", "hey", [s:firstline, s:lastline, s:prompt])
+      call denops#notify("${denops.name}", "hey", [a:firstline, a:lastline, a:prompt])
     endfunction
     command! -nargs=1 -range Hey <line1>,<line2>call Hey(<q-args>)
 
+    function! HeyAbort() abort
+      call denops#notify("${denops.name}", "abort", [])
+    endfunction
+    command! HeyAbort call HeyAbort()
+    map <Plug>HeyAbort <Cmd>HeyAbort<CR>
+
     function! HeyUndo() abort
-      execute 'undo' s:seq_curs[-1]
-      call remove(s:seq_curs, -1)
+      call denops#notify("${denops.name}", "undo", [])
     endfunction
     command! HeyUndo call HeyUndo()
     map <Plug>HeyUndo <Cmd>HeyUndo<CR>
 
     function! HeyAgain() abort
-      call add(s:seq_curs, undotree()["seq_cur"])
-      execute 'undo' s:seq_curs[-2]
-      call denops#notify("${denops.name}", "hey", [s:firstline, s:lastline, s:prompt])
+      call denops#notify("${denops.name}", "again", [])
     endfunction
     command! HeyAgain call HeyAgain()
     map <Plug>HeyAgain <Cmd>HeyAgain<CR>
   `)
 }
+
