@@ -10,7 +10,7 @@ https://user-images.githubusercontent.com/5019902/236111592-23fa3a36-d65d-4af7-9
 
 ## Installation
 
-This plugin is depends on [vim-denops/denops.vim](https://github.com/vim-denops/denops.vim).
+This plugin depends on [vim-denops/denops.vim](https://github.com/vim-denops/denops.vim).
 
 ```vim
 Plug 'vim-denops/denops.vim'
