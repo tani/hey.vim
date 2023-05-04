@@ -3,7 +3,9 @@
 hey.vim is a Vim plugin that utilizes the OpenAI API to edit text.
 
 
-https://user-images.githubusercontent.com/5019902/235354741-b3ec948c-73af-4121-90e9-bd5e2d159852.mp4
+
+https://user-images.githubusercontent.com/5019902/236111592-23fa3a36-d65d-4af7-9b86-6fe0f3c08bb9.mp4
+
 
 
 ## Installation
