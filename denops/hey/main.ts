@@ -61,37 +61,24 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
     - Must insert line breaks for each 80 letters.
     - Must generate the concise text for any input.
 
-    The following is the example of the input and the output.
-    <Input>
-      <Request>${ request }</Request>
-      <PreContext>${ outdent.string("\n"+precontext) }</PreContext>
-      <Context>${ outdent.string("\n"+context) }</Context>
-      <PostContext>${ outdent.string("\n"+postcontext) }</PostContext>
-    </Input>
-    <Output>${ outdent.string("\n"+context) }</Output>
+    The following is the example of the input.
+    <Prompt>${ request }</Prompt>
+    <PreContext>${ outdent.string("\n"+precontext) }</PreContext>
+    <Target>${ outdent.string("\n"+context) }</Target>
+    <PostContext>${ outdent.string("\n"+postcontext) }</PostContext>
   `;
 
   const userPrompt = outdent`
-    Please fill out the output.
-    <Input>
-      <Request>${ request }</Request>
-      <PreContext>${ outdent.string("\n"+precontext) }</PreContext>
-      <Context>${ outdent.string("\n"+context) }</Context>
-      <PostContext>${ outdent.string("\n"+postcontext) }</PostContext>
-    <Input>
-    <Output>
-
-    </Output>
+    <Prompt>${ request }</Prompt>
+    <PreContext>${ outdent.string("\n"+precontext) }</PreContext>
+    <Target>${ outdent.string("\n"+context) }</Target>
+    <PostContext>${ outdent.string("\n"+postcontext) }</PostContext>
   `;
 
-  try {
-    await model.call([
-      new SystemChatMessage(systemPrompt),
-      new HumanChatMessage(userPrompt)
-    ], { options: { signal: controller.signal }});
-  } catch (e) {
-    console.log(e);
-  }
+  await model.call([
+    new SystemChatMessage(systemPrompt),
+    new HumanChatMessage(userPrompt)
+  ], { options: { signal: controller.signal }});
 }
 
 export async function main(denops: Denops) {
@@ -103,12 +90,18 @@ export async function main(denops: Denops) {
 
   denops.dispatcher = {
     async hey(afistline: number, alastline: number, aprompt: string) {
-      controller = new AbortController();
       seq_curs.push((await fn.undotree(denops)).seq_cur);
       myfirstline = afistline;
       mylastline = alastline;
       myprompt = aprompt;
-      hey(denops, myfirstline, mylastline, myprompt, controller);
+      try {
+        controller = new AbortController();
+        await hey(denops, myfirstline, mylastline, myprompt, controller);
+      } catch (e) {
+        console.log(e);
+      } finally {
+        controller = undefined;
+      }
     },
     async undo() {
       denops.cmd(`undo ${seq_curs.pop()}`);
@@ -116,7 +109,14 @@ export async function main(denops: Denops) {
     async again() {
       seq_curs.push((await fn.undotree(denops)).seq_cur);
       denops.cmd(`undo ${seq_curs.at(-2)}`);
-      hey(denops, myfirstline, mylastline, myprompt, controller);
+      try {
+        controller = new AbortController();
+        await hey(denops, myfirstline, mylastline, myprompt, controller);
+      } catch (e) {
+        console.log(e);
+      } finally {
+        controller = undefined;
+      }
     },
     abort() {
       controller?.abort();
@@ -147,4 +147,3 @@ export async function main(denops: Denops) {
     map <Plug>HeyAgain <Cmd>HeyAgain<CR>
   `)
 }
-
