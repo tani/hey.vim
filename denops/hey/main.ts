@@ -83,10 +83,10 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
 
 export async function main(denops: Denops) {
   let controller: AbortController | undefined;
-  let seq_curs: number[] = [];
-  let myfirstline: number = 0;
-  let mylastline: number = 0;
-  let myprompt: string = ""
+  const seq_curs: number[] = [];
+  let myfirstline = 0;
+  let mylastline = 0;
+  let myprompt = ""
 
   denops.dispatcher = {
     async hey(afistline: number, alastline: number, aprompt: string) {
@@ -104,11 +104,11 @@ export async function main(denops: Denops) {
       }
     },
     async undo() {
-      denops.cmd(`undo ${seq_curs.pop()}`);
+      await denops.cmd(`undo ${seq_curs.pop()}`);
     },
     async again() {
       seq_curs.push((await fn.undotree(denops)).seq_cur);
-      denops.cmd(`undo ${seq_curs.at(-2)}`);
+      await denops.cmd(`undo ${seq_curs.at(-2)}`);
       try {
         controller = new AbortController();
         await hey(denops, myfirstline, mylastline, myprompt, controller);
