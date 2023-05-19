@@ -1,12 +1,13 @@
 import { ChatOpenAI } from "https://esm.sh/langchain@0.0.68/chat_models/openai";
 import { HumanChatMessage, SystemChatMessage } from "https://esm.sh/langchain@0.0.68/schema";
 import { Mutex } from "https://esm.sh/async-mutex@0.4.0";
-
-import { Denops } from "https://deno.land/x/denops_std@v4.0.0/mod.ts";
-import * as helper from "https://deno.land/x/denops_std@v4.0.0/helper/mod.ts";
-import * as vars from "https://deno.land/x/denops_std@v4.0.0/variable/mod.ts";
-import * as fn from "https://deno.land/x/denops_std@v4.0.0/function/mod.ts";
-import outdent from 'https://deno.land/x/outdent@v0.8.0/mod.ts';
+import { Denops } from "https://lib.deno.dev/x/denops_std@v4/mod.ts";
+import * as helper from "https://lib.deno.dev/x/denops_std@v4/helper/mod.ts";
+import * as vars from "https://lib.deno.dev/x/denops_std@v4/variable/mod.ts";
+import * as option from "https://lib.deno.dev/x/denops_std@v4/option/mod.ts";
+import * as fn from "https://lib.deno.dev/x/denops_std@v4/function/mod.ts";
+import * as buffer from "https://lib.deno.dev/x/denops_std@v4/buffer/mod.ts"
+import outdent from 'https://lib.deno.dev/x/outdent@v0.8.0/mod.ts';
 
 /**
  * The `hey` function sends a message to the ChatOpenAI model registered with Denops.
@@ -24,9 +25,25 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
   const context = (await fn.getline(denops, firstline, lastline)).join("\n");
   const indent = " ".repeat(await fn.indent(denops, firstline));
   const mutex = new Mutex();
-  await fn.deletebufline(denops, "%", firstline+1, lastline);
-  await fn.setline(denops, firstline, [indent]);
-  await fn.setcursorcharpos(denops, firstline, 0);
+  const bufnr = await fn.bufnr(denops, "HeyVim", true);
+  const [winnr] = await fn.win_findbuf(denops, bufnr);
+  if (winnr >= 0) {
+    await fn.win_execute(denops, winnr, "close");
+  }
+  await buffer.ensure(denops, bufnr, async () => {
+    await option.buftype.set(denops, "nofile");
+    await option.buflisted.set(denops, false);
+    await option.number.set(denops, false);
+    await option.relativenumber.set(denops, false);
+    await option.signcolumn.set(denops, "no");
+    await option.swapfile.set(denops, false);
+    await option.wrap.set(denops, true);
+    await option.filetype.set(denops, "markdown");
+    await denops.cmd(`vnew HeyVim`)
+    const [winnr] = await fn.win_findbuf(denops, bufnr);
+    await fn.win_execute(denops, winnr, `vertical resize 80`)
+    await fn.deletebufline(denops, bufnr, 1, "$");
+  })
 
   const model = new ChatOpenAI({
     modelName: await vars.g.get(denops, "hey_model_name", "gpt-3.5-turbo"),
@@ -36,14 +53,9 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
       {
         async handleLLMNewToken(token: string) {
           await mutex.runExclusive(async () => {
-            const crow = await fn.line(denops, ".");
-            const cline = await fn.getline(denops, crow);
-            const lines = (cline + token).replace("\n", "\n"+indent).split("\n");
-            const nrow = crow + lines.length - 1;
-            const ncol = Array.from(new Intl.Segmenter().segment(lines.at(-1))).length;
-            await fn.append(denops, crow, Array(lines.length - 1).fill(""));
-            await fn.setline(denops, crow, lines);
-            await fn.setcursorcharpos(denops, nrow, ncol);
+            let lines = await fn.getbufline(denops, bufnr, 1, "$");
+            lines = (lines.join("\n") + token).split("\n")
+            await buffer.replace(denops, bufnr, lines);
           });
         }
       }
@@ -56,10 +68,8 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
     - helping human to write prose (e.g., grammar/ spelling correction)
 
     The condition of the output is:
-    - Ask no question regarding the input.
-    - Must be only text according to the input.
-    - Must insert line breaks for each 80 letters.
-    - Must generate the concise text for any input.
+    - Must use Markdown format.
+    - Must generate the concise text.
 
     The following is the example of the input.
     <Prompt>${ request }</Prompt>
