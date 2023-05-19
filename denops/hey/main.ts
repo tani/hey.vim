@@ -93,35 +93,12 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
 
 export async function main(denops: Denops) {
   let controller: AbortController | undefined;
-  const seq_curs: number[] = [];
-  let myfirstline = 0;
-  let mylastline = 0;
-  let myprompt = ""
 
   denops.dispatcher = {
-    async hey(afistline: number, alastline: number, aprompt: string) {
-      seq_curs.push((await fn.undotree(denops)).seq_cur);
-      myfirstline = afistline;
-      mylastline = alastline;
-      myprompt = aprompt;
+    async hey(firstline: number, lastline: number, prompt: string) {
       try {
         controller = new AbortController();
-        await hey(denops, myfirstline, mylastline, myprompt, controller);
-      } catch (e) {
-        console.log(e);
-      } finally {
-        controller = undefined;
-      }
-    },
-    async undo() {
-      await denops.cmd(`undo ${seq_curs.pop()}`);
-    },
-    async again() {
-      seq_curs.push((await fn.undotree(denops)).seq_cur);
-      await denops.cmd(`undo ${seq_curs.at(-2)}`);
-      try {
-        controller = new AbortController();
-        await hey(denops, myfirstline, mylastline, myprompt, controller);
+        await hey(denops, firstline, lastline, prompt, controller);
       } catch (e) {
         console.log(e);
       } finally {
@@ -142,18 +119,5 @@ export async function main(denops: Denops) {
       call denops#notify("${denops.name}", "abort", [])
     endfunction
     command! HeyAbort call HeyAbort()
-    map <Plug>HeyAbort <Cmd>HeyAbort<CR>
-
-    function! HeyUndo() abort
-      call denops#notify("${denops.name}", "undo", [])
-    endfunction
-    command! HeyUndo call HeyUndo()
-    map <Plug>HeyUndo <Cmd>HeyUndo<CR>
-
-    function! HeyAgain() abort
-      call denops#notify("${denops.name}", "again", [])
-    endfunction
-    command! HeyAgain call HeyAgain()
-    map <Plug>HeyAgain <Cmd>HeyAgain<CR>
   `)
 }
