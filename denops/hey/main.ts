@@ -1,6 +1,6 @@
 import { ChatOpenAI } from "https://esm.sh/langchain@0.0.68/chat_models/openai";
 import { HumanChatMessage, SystemChatMessage } from "https://esm.sh/langchain@0.0.68/schema";
-import { Mutex } from "https://esm.sh/async-mutex@0.4.0";
+import { Mutex } from "https://lib.deno.dev/x/async@v2/mod.ts";
 import { Denops } from "https://lib.deno.dev/x/denops_std@v4/mod.ts";
 import * as helper from "https://lib.deno.dev/x/denops_std@v4/helper/mod.ts";
 import * as vars from "https://lib.deno.dev/x/denops_std@v4/variable/mod.ts";
@@ -24,7 +24,6 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
   const postcontext = (await fn.getline(denops, lastline + 1, lastline + 20)).join("\n");
   const context = (await fn.getline(denops, firstline, lastline)).join("\n");
   const indent = " ".repeat(await fn.indent(denops, firstline));
-  const mutex = new Mutex();
   const bufnr = await fn.bufnr(denops, "HeyVim", true);
   const [winnr] = await fn.win_findbuf(denops, bufnr);
   if (winnr >= 0) {
@@ -45,6 +44,7 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
     await fn.deletebufline(denops, bufnr, 1, "$");
   })
 
+  const mutex = new Mutex();
   const model = new ChatOpenAI({
     modelName: await vars.g.get(denops, "hey_model_name", "gpt-3.5-turbo"),
     verbose: await vars.g.get(denops, "hey_verbose", false),
@@ -52,11 +52,11 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
     callbacks: [
       {
         async handleLLMNewToken(token: string) {
-          await mutex.runExclusive(async () => {
-            let lines = await fn.getbufline(denops, bufnr, 1, "$");
-            lines = (lines.join("\n") + token).split("\n")
-            await buffer.replace(denops, bufnr, lines);
-          });
+          await mutex.acquire();
+          let lines = await fn.getbufline(denops, bufnr, 1, "$");
+          lines = (lines.join("\n") + token).split("\n")
+          await buffer.replace(denops, bufnr, lines);
+          await mutex.release();
         }
       }
     ]
