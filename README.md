@@ -28,9 +28,9 @@ Note that if you're using [denops-shared-server](https://github.com/vim-denops/d
 
 ## Options
 
-- `g:hey_openai_api_key` - Set the OpenAI API key to use. Defaults is not set, `OPENAI_API_KEY` environment variable is used.
-- `g:hey_model_name` - Set the model name to use. Defaults `"gpt-3.5-turbo"`
-- `g:hey_verbose` - Set verbose mode. Defaults `v:false`.
+- `g:hey_openai_api_key` - Set the OpenAI API key to use. If the value is not set, the `OPENAI_API_KEY` environment variable will be used.
+- `g:hey_model_name` - Set the model name to use. The default is `"gpt-3.5-turbo"`.
+- `g:hey_verbose` - Set the verbose mode. The default is `v:false`.
 
 ## License
 
