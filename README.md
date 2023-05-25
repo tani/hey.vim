@@ -19,7 +19,7 @@ Plug 'tani/hey.vim'
 
 You need to set OpenAI API key as `OPENAI_API_KEY` environment variable.
 
-Note that if you're using [denops-shared-server](https://github.com/vim-denops/denops-shared-server.vim), the environment variables are separate from Vim. In that case, set it to `g:hey_openai_api_key`.
+Note that if you're using [denops-shared-server](https://github.com/vim-denops/denops-shared-server.vim), the environment variable is separate from Vim. In this case, you should set it to `g:hey_openai_api_key`.
 
 ## Commands
 
