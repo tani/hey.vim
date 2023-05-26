@@ -19,10 +19,18 @@ Plug 'tani/hey.vim'
 
 You need to set OpenAI API key as `OPENAI_API_KEY` environment variable.
 
+Note that if you're using [denops-shared-server](https://github.com/vim-denops/denops-shared-server.vim), the environment variable is separate from Vim. In this case, you should set it to `g:hey_openai_api_key`.
+
 ## Commands
 
 - `[range]Hey {prompt}` - Edit text with OpenAI API.
 - `HeyAbort` - Abort the current edit.
+
+## Options
+
+- `g:hey_openai_api_key` - Set the OpenAI API key to use. If the value is not set, the `OPENAI_API_KEY` environment variable will be used.
+- `g:hey_model_name` - Set the model name to use. The default is `"gpt-3.5-turbo"`.
+- `g:hey_verbose` - Set the verbose mode. The default is `v:false`.
 
 ## License
 

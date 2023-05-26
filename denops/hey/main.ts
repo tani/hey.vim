@@ -46,6 +46,7 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
 
   const mutex = new Mutex();
   const model = new ChatOpenAI({
+    openAIApiKey: await vars.g.get<string | undefined>(denops, "hey_openai_api_key", undefined),
     modelName: await vars.g.get(denops, "hey_model_name", "gpt-3.5-turbo"),
     verbose: await vars.g.get(denops, "hey_verbose", false),
     streaming: true,
