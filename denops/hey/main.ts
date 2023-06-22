@@ -7,7 +7,6 @@ import * as vars from "https://lib.deno.dev/x/denops_std@v4/variable/mod.ts";
 import * as option from "https://lib.deno.dev/x/denops_std@v4/option/mod.ts";
 import * as fn from "https://lib.deno.dev/x/denops_std@v4/function/mod.ts";
 import * as buffer from "https://lib.deno.dev/x/denops_std@v4/buffer/mod.ts";
-import * as mapping from "https://lib.deno.dev/x/denops_std@v4/mapping/mod.ts";
 import outdent from "https://lib.deno.dev/x/outdent@v0.8.0/mod.ts";
 import * as popup from "https://deno.land/x/denops_popup@v2.2.0/mod.ts";
 
@@ -23,7 +22,6 @@ async function showPopup(denops: Denops): Promise<[number, number]> {
     await option.wrap.set(denops, true);
     await option.filetype.set(denops, "markdown");
     await fn.deletebufline(denops, bufnr, 1, "$");
-    await mapping.map(denops, "q", "<Cmd>quit<CR>", { mode: "n", buffer: true, noremap: true })
   })
   const winh = await fn.winheight(denops, "%") as number;
   const winw = await fn.winwidth(denops, "%") as number;
@@ -55,7 +53,6 @@ async function showWindow(denops: Denops): Promise<[number, number]> {
     await option.filetype.set(denops, "markdown");
     await denops.cmd(`vnew HeyVim`)
     await fn.deletebufline(denops, bufnr, 1, "$");
-    await mapping.map(denops, "q", "<Cmd>quit<CR>", { mode: "n", buffer: true, noremap: true })
   })
   return [bufnr, winnr]
 }

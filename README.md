@@ -32,7 +32,6 @@ the environment variable is separate from Vim. In this case, you should set it t
 
 - `[range]Hey {prompt}` - Edit text with OpenAI API.
 - `HeyAbort` - Abort the current edit.
-- Press `q` to close chat buffer.
 
 ## Options
 
