@@ -102,14 +102,9 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
     - helping human to write prose (e.g., grammar/ spelling correction)
 
     The condition of the output is:
-    - Must use Markdown format.
-    - Must generate the concise text.
-
-    The following is the example of the input.
-    <Prompt>${ request }</Prompt>
-    <PreContext>${ outdent.string("\n"+precontext) }</PreContext>
-    <Target>${ outdent.string("\n"+context) }</Target>
-    <PostContext>${ outdent.string("\n"+postcontext) }</PostContext>
+    - markdown format.
+    - the concise text.
+    - no repetition of user prompt.
   `;
 
   const userPrompt = outdent`
