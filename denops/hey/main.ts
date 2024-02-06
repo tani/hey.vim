@@ -90,6 +90,7 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
           let lines = await fn.getbufline(denops, bufnr, 1, "$");
           lines = (lines.join("\n") + token).split("\n")
           await buffer.replace(denops, bufnr, lines);
+          await denops.cmd('redraw');
           mutex.release();
         }
       }
