@@ -26,7 +26,7 @@ import { is } from "https://lib.deno.dev/x/unknownutil@3/mod.ts";
  * @returns {promise<[number, number]>} a promise that resolves to a tuple 
  * containing the row and column where the popup is placed.
  */
-async function showpopup(denops: denops): promise<[number, number]> {
+async function showPopup(denops: denops): promise<[number, number]> {
   const bufnr = await fn.bufnr(denops, "heyvim", true);
   await buffer.ensure(denops, bufnr, async () => {
     await option.buftype.set(denops, "nofile");
@@ -60,7 +60,7 @@ async function showpopup(denops: denops): promise<[number, number]> {
  * @param {denops} denops - Denops instance for Vim/Neovim API interaction.
  * @returns {Promise<[number, number]>} Promise resolving to ["heyvim" buffer number, window number].
  */
-async function showwindow(denops: denops): promise<[number, number]> {
+async function showWindow(denops: denops): promise<[number, number]> {
   const bufnr = await fn.bufnr(denops, "heyvim", true);
   const [winnr] = await fn.win_findbuf(denops, bufnr) as number[];
   if (winnr >= 0) {
