@@ -1,15 +1,15 @@
-import { ChatOpenAI } from "https://esm.sh/langchain@0.1.14/chat_models/openai";
-import { HumanChatMessage, SystemChatMessage } from "https://esm.sh/langchain@0.1.14/schema";
-import { Mutex } from "https://lib.deno.dev/x/async@v2/mod.ts";
-import { Denops } from "https://lib.deno.dev/x/denops_std@v6/mod.ts";
-import * as buffer from "https://lib.deno.dev/x/denops_std@v6/buffer/mod.ts";
-import * as fn from "https://lib.deno.dev/x/denops_std@v6/function/mod.ts";
-import * as helper from "https://lib.deno.dev/x/denops_std@v6/helper/mod.ts";
-import * as option from "https://lib.deno.dev/x/denops_std@v6/option/mod.ts";
-import * as popup from "https://lib.deno.dev/x/denops_popup@v2/mod.ts";
-import * as vars from "https://lib.deno.dev/x/denops_std@v6/variable/mod.ts";
-import outdent from "https://lib.deno.dev/x/outdent@v0.8.0/mod.ts";
-import { is } from "https://lib.deno.dev/x/unknownutil@3/mod.ts";
+import { ChatOpenAI } from "npm:@langchain/openai@0.2";
+import { HumanMessage, SystemMessage } from "npm:@langchain/core@0.2/messages";
+import { Mutex } from "jsr:@core/asyncutil@1";
+import { Denops } from "jsr:@denops/std@7";
+import * as buffer from "jsr:@denops/std@7/buffer";
+import * as fn from "jsr:@denops/std@7/function";
+import * as helper from "jsr:@denops/std@7/helper";
+import * as option from "jsr:@denops/std@7/option";
+import * as vars from "jsr:@denops/std@7/variable";
+import * as popup from "https://lib.deno.dev/x/denops_popup@2/mod.ts";
+import { outdent } from "npm:outdent@0.8.0";
+import { is } from "jsr:@core/unknownutil@4";
 
 /**
  * shows a popup window with specific settings and dimensions based on the 
@@ -26,7 +26,7 @@ import { is } from "https://lib.deno.dev/x/unknownutil@3/mod.ts";
  * @returns {promise<[number, number]>} a promise that resolves to a tuple 
  * containing the row and column where the popup is placed.
  */
-async function showPopup(denops: denops): promise<[number, number]> {
+async function showPopup(denops: Denops): Promise<[number, number]> {
   const bufnr = await fn.bufnr(denops, "heyvim", true);
   await buffer.ensure(denops, bufnr, async () => {
     await option.buftype.set(denops, "nofile");
@@ -41,11 +41,11 @@ async function showPopup(denops: denops): promise<[number, number]> {
   })
   const winh = await fn.winheight(denops, "%") as number;
   const winw = await fn.winwidth(denops, "%") as number;
-  const poph = math.floor(winh * 0.8);
-  const popw = math.floor(winw * 0.8);
-  const row = math.floor((winh - poph) / 2);
-  const col = math.floor((winw - popw) / 2);
-  const winnr = await popup.open(denops, bufnr, {
+  const poph = Math.floor(winh * 0.8);
+  const popw = Math.floor(winw * 0.8);
+  const row = Math.floor((winh - poph) / 2);
+  const col = Math.floor((winw - popw) / 2);
+  const winnr = await popup.open(denops as any, bufnr, {
     row, col, height: poph, width: popw, origin: "topleft", border: true,
   })
   await fn.win_gotoid(denops, winnr);
@@ -60,7 +60,7 @@ async function showPopup(denops: denops): promise<[number, number]> {
  * @param {denops} denops - Denops instance for Vim/Neovim API interaction.
  * @returns {Promise<[number, number]>} Promise resolving to ["heyvim" buffer number, window number].
  */
-async function showWindow(denops: denops): promise<[number, number]> {
+async function showWindow(denops: Denops): Promise<[number, number]> {
   const bufnr = await fn.bufnr(denops, "heyvim", true);
   const [winnr] = await fn.win_findbuf(denops, bufnr) as number[];
   if (winnr >= 0) {
@@ -118,20 +118,19 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
   const mutex = new Mutex();
   const model = new ChatOpenAI({
     openAIApiKey: await vars.g.get<string | undefined>(denops, "hey_openai_api_key", undefined),
-    modelName: await vars.g.get(denops, "hey_model_name", "gpt-3.5-turbo"),
+    modelName: await vars.g.get(denops, "hey_model_name", "gpt-4o-mini"),
     verbose: await vars.g.get(denops, "hey_verbose", false),
     streaming: true,
     callbacks: [
       {
         async handleLLMNewToken(token: string) {
-          await mutex.acquire();
+          using _lock = await mutex.acquire();
           let lines = await fn.getbufline(denops, bufnr, lastline2);
           lines = (lines.join("\n") + token).split("\n")
           await fn.deletebufline(denops, bufnr, lastline2);
           await fn.appendbufline(denops, bufnr, lastline2 - 1, lines);
           await denops.cmd('redraw');
           lastline2 += lines.length - 1;
-          mutex.release();
         }
       }
     ]
@@ -157,11 +156,11 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
     [Target]${ outdent.string("\n"+context) }[/Target]
   `;
 
-  await model.call([
-    new SystemChatMessage(systemPrompt),
-    new SystemChatMessage(precontextPromt),
-    new SystemChatMessage(postcontextPrompt),
-    new HumanChatMessage(userPrompt)
+  await model.invoke([
+    new SystemMessage(systemPrompt),
+    new SystemMessage(precontextPromt),
+    new SystemMessage(postcontextPrompt),
+    new HumanMessage(userPrompt)
   ], { options: { signal: controller.signal }});
 }
 
@@ -170,8 +169,7 @@ export async function main(denops: Denops) {
 
   denops.dispatcher = {
     async hey(firstline: unknown, lastline: unknown, prompt: unknown, bang: unknown) {
-      const isArguments = is.TupleOf([is.Number, is.Number, is.String, is.String]);
-      if (!isArguments([firstline, lastline, prompt, bang])) {
+      if (!(is.Number(firstline) && is.Number(lastline) && is.String(prompt) && is.String(bang))) {
         console.warn('Invalid arguments');
         return
       }
