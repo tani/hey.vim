@@ -1,7 +1,6 @@
 import { ChatOpenAI } from "npm:@langchain/openai@0.2";
 import { HumanMessage, SystemMessage } from "npm:@langchain/core@0.2/messages";
-import { Mutex } from "jsr:@core/asyncutil@1";
-import { Denops } from "jsr:@denops/std@7";
+import type { Denops, Entrypoint } from "jsr:@denops/std@7";
 import * as buffer from "jsr:@denops/std@7/buffer";
 import * as fn from "jsr:@denops/std@7/function";
 import * as helper from "jsr:@denops/std@7/helper";
@@ -88,11 +87,11 @@ async function showWindow(denops: Denops): Promise<[number, number]> {
  * @param {number} firstline - The first line number of the range to send
  * @param {number} lastline - The last line number of the range to send
  * @param {string} request - The input text to send to the model
- * @param {AbortController} controller - The AbortController to abort the request
+ * @param {AbortSignal} signal - The AbortSignal to abort the request
  * @param {string} bang - The bang to determine the behavior of the function
  * @returns {Promise<void>}
  */
-async function hey(denops: Denops, firstline: number, lastline: number, request: string, controller: AbortController, bang: string = '') {
+async function hey(denops: Denops, firstline: number, lastline: number, request: string, signal: AbortSignal, bang: string = '') {
   const precontext = (await fn.getline(denops, 0, firstline - 1)).join("\n").slice(-4000);
   const postcontext = (await fn.getline(denops, lastline + 1, "$")).join("\n").slice(0, 4000);
   const context = (await fn.getline(denops, firstline, lastline)).join("\n")
@@ -115,25 +114,11 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
     bufnr = (await showPopup(denops))[0]
     lastline2 = 1;
   }
-  const mutex = new Mutex();
   const model = new ChatOpenAI({
     openAIApiKey: await vars.g.get<string | undefined>(denops, "hey_openai_api_key", undefined),
     modelName: await vars.g.get(denops, "hey_model_name", "gpt-4o-mini"),
     verbose: await vars.g.get(denops, "hey_verbose", false),
     streaming: true,
-    callbacks: [
-      {
-        async handleLLMNewToken(token: string) {
-          using _lock = await mutex.acquire();
-          let lines = await fn.getbufline(denops, bufnr, lastline2);
-          lines = (lines.join("\n") + token).split("\n")
-          await fn.deletebufline(denops, bufnr, lastline2);
-          await fn.appendbufline(denops, bufnr, lastline2 - 1, lines);
-          await denops.cmd('redraw');
-          lastline2 += lines.length - 1;
-        }
-      }
-    ]
   });
 
   const systemPrompt = outdent`
@@ -156,16 +141,31 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
     [Target]${ outdent.string("\n"+context) }[/Target]
   `;
 
-  await model.invoke([
+  const input = [
     new SystemMessage(systemPrompt),
     new SystemMessage(precontextPromt),
     new SystemMessage(postcontextPrompt),
     new HumanMessage(userPrompt)
-  ], { options: { signal: controller.signal }});
+  ];
+
+  const results = await model.stream(input, { signal });
+  for await (const chunk of results) {
+    let lines = await fn.getbufline(denops, bufnr, lastline2);
+    lines = (lines.join("\n") + chunk.content).split("\n")
+    await fn.deletebufline(denops, bufnr, lastline2);
+    await fn.appendbufline(denops, bufnr, lastline2 - 1, lines);
+    await denops.cmd('redraw');
+    lastline2 += lines.length - 1;
+  }
 }
 
-export async function main(denops: Denops) {
+export const main: Entrypoint = async (denops) => {
   let controller: AbortController | undefined;
+
+  const abort = () => {
+    controller?.abort();
+    return Promise.resolve()
+  };
 
   denops.dispatcher = {
     async hey(firstline: unknown, lastline: unknown, prompt: unknown, bang: unknown) {
@@ -173,20 +173,24 @@ export async function main(denops: Denops) {
         console.warn('Invalid arguments');
         return
       }
+      controller = new AbortController();
+      const signal = AbortSignal.any([
+        controller.signal,
+        ...(denops.interrupted ? [denops.interrupted] : []),
+      ]);
       try {
-        controller = new AbortController();
-        await hey(denops, firstline, lastline, prompt, controller, bang);
+        await hey(denops, firstline, lastline, prompt, signal, bang);
       } catch (e) {
-        console.log(e);
+        if (!(e instanceof Error && e.name === 'Aborted')) {
+          throw e;
+        }
       } finally {
         controller = undefined;
       }
     },
-    abort() {
-      controller?.abort();
-      return Promise.resolve()
-    }
+    abort,
   };
+
   await helper.execute(denops, outdent`
     function! Hey(prompt, bang) range abort
       call denops#notify("${denops.name}", "hey", [a:firstline, a:lastline, a:prompt, a:bang])
@@ -197,5 +201,11 @@ export async function main(denops: Denops) {
       call denops#notify("${denops.name}", "abort", [])
     endfunction
     command! HeyAbort call HeyAbort()
-  `)
-}
+  `);
+
+  return {
+    [Symbol.asyncDispose]() {
+      return abort();
+    },
+  };
+};
