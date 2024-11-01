@@ -8,7 +8,7 @@ import * as option from "jsr:@denops/std@7/option";
 import * as vars from "jsr:@denops/std@7/variable";
 import * as popup from "https://lib.deno.dev/x/denops_popup@2/mod.ts";
 import { outdent } from "npm:outdent@0.8.0";
-import { is } from "jsr:@core/unknownutil@4";
+import { assert, is } from "jsr:@core/unknownutil@4";
 
 /**
  * shows a popup window with specific settings and dimensions based on the 
@@ -169,10 +169,10 @@ export const main: Entrypoint = async (denops) => {
 
   denops.dispatcher = {
     async hey(firstline: unknown, lastline: unknown, prompt: unknown, bang: unknown) {
-      if (!(is.Number(firstline) && is.Number(lastline) && is.String(prompt) && is.String(bang))) {
-        console.warn('Invalid arguments');
-        return
-      }
+      assert(firstline, is.Number, { name: "firstline" });
+      assert(lastline, is.Number, { name: "lastline" });
+      assert(prompt, is.String, { name: "prompt" });
+      assert(bang, is.String, { name: "bang" });
       controller = new AbortController();
       const signal = AbortSignal.any([
         controller.signal,
