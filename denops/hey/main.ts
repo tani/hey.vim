@@ -99,9 +99,7 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
   let lastline2: number;
   let restriction = '';
   if (bang === '!') {
-    if ((bufnr = await fn.bufnr(denops, '.')) < 0) {
-      throw new Error('No file name');
-    }
+    bufnr = await fn.bufnr(denops);
     await fn.deletebufline(denops, bufnr, firstline, lastline);
     await fn.appendbufline(denops, bufnr, firstline - 1, [""]);
     lastline2 = firstline;
