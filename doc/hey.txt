@@ -1,0 +1,111 @@
+*hey.txt*	Utilizes the LLM service API to edit text.
+
+Author: TANIGUCHI Masaya <ta2gch at gmail.com>
+License: MIT license
+
+CONTENTS							*hey-contents*
+
+Introduction			|hey-introduction|
+Install				|hey-install|
+  Environment Variables		  |hey-environment-variables|
+Options				|hey-options|
+Commands			|hey-commands|
+
+
+==============================================================================
+INTRODUCTION						    *hey-introduction*
+
+*hey.vim* utilizes the LLM service API to edit text.
+
+It supports the following services:
+
+- [OpenAI API](https://openai.com/index/openai-api/)
+- [Google Gemini API](https://ai.google.dev/gemini-api)
+
+
+==============================================================================
+INSTALL								 *hey-install*
+
+This plugin depends on Deno and |denops.vim|.
+
+[Deno]: https://deno.com/
+[denops.vim]: https://github.com/vim-denops/denops.vim
+
+						   *hey-environment-variables*
+				     *hey-$OPENAI_API_KEY* *hey-$GOOGLE_API_KEY*
+You need to get an API key for the LLM service and set it to the environment
+variable:
+
+- |$OPENAI_API_KEY| for OpenAI API.
+- |$GOOGLE_API_KEY| for Google Gemini API.
+- |$ANTHROPIC_API_KEY| for Anthropic Claude API.
+
+Note that if you're using |denops-shared-server|, the environment variable is
+separate from Vim.  In this case, you should set it to the system environment
+variable or set |g:hey_api_key|.
+
+[denops-shared-server]: https://github.com/vim-denops/denops-shared-server.vim
+
+
+==============================================================================
+OPTIONS								 *hey-options*
+
+							  *g:hey_service_type*
+g:hey_service_type
+		Set the service type to use:
+		  - "openai" for OpenAI API.
+		  - "google" for Google Gemini API.
+		  - "anthropic" for Anthropic Claude API.
+
+		Default: "openai"
+
+							    *g:hey_model_name*
+g:hey_model_name
+		Set the model name to use.
+
+		Default for OpenAI: "gpt-4o-mini"
+		Default for Google: "gemini-1.5-flash"
+
+				       *g:hey_{service}_api_key* *g:hey_api_key*
+g:hey_{service}_api_key
+g:hey_api_key
+		Sets the API key for |g:hey_service_type|.
+
+		First |g:hey_{service}_api_key| is used (e.g.
+		`g:hey_openai_api_key`).  If it is not set, |g:hey_api_key| is
+		used.  If both are not set, |hey-environment-variables| will
+		be used.
+
+		Default: (not set)
+
+							 *g:hey_message_style*
+g:hey_message_style
+		It determines the style of the message, either "window" or
+		else implicitly "popup" is accepted.
+
+		Default: "window"
+
+							       *g:hey_verbose*
+g:hey_verbose
+		Set the verbose mode.
+
+		Default: |v:false|
+
+
+==============================================================================
+COMMANDS							*hey-commands*
+
+									*:Hey*
+:[range]Hey[!] {prompt}
+		Edit the text in the [range].  {prompt} can be written in any
+		language that the LLM understands.
+
+		With !, the text is replaced inplace.  Otherwise, the message
+		is output in a separate window. (|g:hey_message_style|)
+
+								   *:HeyAbort*
+:HeyAbort
+		Abort the current asynchronous operation.
+
+
+ vim:tw=78:ts=8:noet:ft=help:norl:

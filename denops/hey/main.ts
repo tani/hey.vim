@@ -1,14 +1,14 @@
-import { ChatOpenAI } from "npm:@langchain/openai@0.2";
-import { HumanMessage, SystemMessage } from "npm:@langchain/core@0.2/messages";
 import type { Denops, Entrypoint } from "jsr:@denops/std@7";
 import * as buffer from "jsr:@denops/std@7/buffer";
 import * as fn from "jsr:@denops/std@7/function";
 import * as helper from "jsr:@denops/std@7/helper";
 import * as option from "jsr:@denops/std@7/option";
-import * as vars from "jsr:@denops/std@7/variable";
 import * as popup from "https://lib.deno.dev/x/denops_popup@2/mod.ts";
 import { outdent } from "npm:outdent@0.8.0";
 import { assert, is } from "jsr:@core/unknownutil@4";
+import { DEFAULT_SERVICE_TYPE, getConfig } from "./config.ts";
+import { loadService } from "./service.ts";
+import type { HeyConfig } from "./types.ts";
 
 /**
  * shows a popup window with specific settings and dimensions based on the 
@@ -89,12 +89,21 @@ async function showWindow(denops: Denops): Promise<[number, number]> {
  * @param {string} request - The input text to send to the model
  * @param {AbortSignal} signal - The AbortSignal to abort the request
  * @param {string} bang - The bang to determine the behavior of the function
- * @returns {Promise<void>}
+ * @param {HeyConfig} config - The configuration
  */
-async function hey(denops: Denops, firstline: number, lastline: number, request: string, signal: AbortSignal, bang: string = '') {
+async function hey(
+  denops: Denops,
+  firstline: number,
+  lastline: number,
+  request: string,
+  signal: AbortSignal,
+  bang: string,
+  config: HeyConfig,
+): Promise<void> {
   const precontext = (await fn.getline(denops, 0, firstline - 1)).join("\n").slice(-4000);
   const postcontext = (await fn.getline(denops, lastline + 1, "$")).join("\n").slice(0, 4000);
   const context = (await fn.getline(denops, firstline, lastline)).join("\n")
+  const filetype = await option.filetype.get(denops) || "text";
   let bufnr: number;
   let lastline2: number;
   let restriction = '';
@@ -107,51 +116,51 @@ async function hey(denops: Denops, firstline: number, lastline: number, request:
     lastline2 = firstline;
     restriction += 'Do not wrap the output with the code block (e.g., ```python ... ```).\n';
     restriction += 'Do not write the natural language text out of the code block.\n';
-  } else if (await vars.g.get(denops, "hey_message_style", "window") === "window") {
+  } else if (config.messageStyle === "window") {
     bufnr = (await showWindow(denops))[0]
     lastline2 = 1;
   } else {
     bufnr = (await showPopup(denops))[0]
     lastline2 = 1;
   }
-  const model = new ChatOpenAI({
-    openAIApiKey: await vars.g.get<string | undefined>(denops, "hey_openai_api_key", undefined),
-    modelName: await vars.g.get(denops, "hey_model_name", "gpt-4o-mini"),
-    verbose: await vars.g.get(denops, "hey_verbose", false),
-    streaming: true,
-  });
 
   const systemPrompt = outdent`
-    Act a professional ${ await vars.o.get(denops, "filetype") } writer for:
+    Act a professional ${filetype} writer for:
     - helping human to write code (e.g., auto-completion)
     - helping human to write prose (e.g., grammar/ spelling correction)
 
     ${ restriction }
   `;
-
-  const precontextPromt = outdent`
+  const precontextPrompt = outdent`
     [PreContext]${ outdent.string("\n"+precontext) }[/PreContext]
   `
   const postcontextPrompt = outdent`
     [PostContext]${ outdent.string("\n"+postcontext) }[/PostContext]
   `
-
   const userPrompt = outdent`
     [Prompt]${ request }[/Prompt]
     [Target]${ outdent.string("\n"+context) }[/Target]
   `;
 
-  const input = [
-    new SystemMessage(systemPrompt),
-    new SystemMessage(precontextPromt),
-    new SystemMessage(postcontextPrompt),
-    new HumanMessage(userPrompt)
-  ];
+  const llm = await loadService(
+    denops,
+    config.serviceType ?? DEFAULT_SERVICE_TYPE,
+  );
+  const results = await llm.stream(
+    denops,
+    {
+      system: systemPrompt,
+      precontext: precontextPrompt,
+      postcontext: postcontextPrompt,
+      user: userPrompt,
+    },
+    config,
+    { signal },
+  );
 
-  const results = await model.stream(input, { signal });
   for await (const chunk of results) {
     let lines = await fn.getbufline(denops, bufnr, lastline2);
-    lines = (lines.join("\n") + chunk.content).split("\n")
+    lines = (lines.join("\n") + chunk).split("\n");
     await fn.deletebufline(denops, bufnr, lastline2);
     await fn.appendbufline(denops, bufnr, lastline2 - 1, lines);
     await denops.cmd('redraw');
@@ -179,10 +188,11 @@ export const main: Entrypoint = async (denops) => {
         ...(denops.interrupted ? [denops.interrupted] : []),
       ]);
       try {
-        await hey(denops, firstline, lastline, prompt, signal, bang);
+        const config = await getConfig(denops);
+        await hey(denops, firstline, lastline, prompt, signal, bang, config);
       } catch (e) {
         if (!(e instanceof Error && e.name === 'Aborted')) {
-          throw e;
+          helper.echoerr(denops, `[hey] ${e}`);
         }
       } finally {
         controller = undefined;
