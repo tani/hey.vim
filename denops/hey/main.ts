@@ -130,6 +130,10 @@ export const main: Entrypoint = async (denops) => {
         controller = undefined;
       }
     },
+    async close() {
+      await closePopup(denops);
+      await closeWindow(denops);
+    },
     abort,
   };
 
@@ -143,6 +147,11 @@ export const main: Entrypoint = async (denops) => {
       call denops#notify("${denops.name}", "abort", [])
     endfunction
     command! HeyAbort call HeyAbort()
+
+    function! HeyClose() abort
+      call denops#notify("${denops.name}", "close", [])
+    endfunction
+    command! HeyClose call HeyClose()
   `);
 
   return {
