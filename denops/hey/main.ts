@@ -1,4 +1,5 @@
 import type { Denops, Entrypoint } from "jsr:@denops/std@7";
+import { batch } from "jsr:@denops/std@7/batch";
 import * as fn from "jsr:@denops/std@7/function";
 import * as helper from "jsr:@denops/std@7/helper";
 import * as option from "jsr:@denops/std@7/option";
@@ -30,29 +31,28 @@ async function hey(
   bang: string,
   config: HeyConfig,
 ): Promise<void> {
-  const precontext = (await fn.getline(denops, 0, firstline - 1)).join("\n").slice(-4000);
-  const postcontext = (await fn.getline(denops, lastline + 1, "$")).join("\n").slice(0, 4000);
-  const context = (await fn.getline(denops, firstline, lastline)).join("\n")
+  const alllines = await fn.getline(denops, 1, "$");
+  const precontext = alllines.slice(0, firstline - 1).join("\n").slice(-4000);
+  const postcontext = alllines.slice(lastline).join("\n").slice(0, 4000);
+  const context = alllines.slice(firstline - 1, lastline).join("\n");
   const filetype = await option.filetype.get(denops) || "text";
   let bufnr: number;
-  let lastline2: number;
+  let lnum = 1;
   let restriction = '';
   if (bang === '!') {
     bufnr = await fn.bufnr(denops);
     await fn.deletebufline(denops, bufnr, firstline, lastline);
     await fn.appendbufline(denops, bufnr, firstline - 1, [""]);
-    lastline2 = firstline;
+    lnum = firstline;
     restriction += 'Do not wrap the output with the code block (e.g., ```python ... ```).\n';
     restriction += 'Do not write the natural language text out of the code block.\n';
   } else if (config.messageStyle === "window") {
     await closePopup(denops);
     [bufnr] = await showWindow(denops);
-    lastline2 = 1;
   } else {
     await closeWindow(denops);
     await closePopup(denops);
     [bufnr] = await showPopup(denops);
-    lastline2 = 1;
   }
 
   const systemPrompt = outdent`
@@ -89,13 +89,16 @@ async function hey(
     { signal },
   );
 
+  let rest = "";
   for await (const chunk of results) {
-    let lines = await fn.getbufline(denops, bufnr, lastline2);
-    lines = (lines.join("\n") + chunk).split("\n");
-    await fn.deletebufline(denops, bufnr, lastline2);
-    await fn.appendbufline(denops, bufnr, lastline2 - 1, lines);
-    await denops.cmd('redraw');
-    lastline2 += lines.length - 1;
+    const lines = (rest + chunk).split("\n");
+    await batch(denops, async (denops) => {
+      await fn.deletebufline(denops, bufnr, lnum);
+      await fn.appendbufline(denops, bufnr, lnum - 1, lines);
+      await denops.cmd("redraw");
+    });
+    lnum += lines.length - 1;
+    rest = lines.at(-1)!;
   }
 }
 
