@@ -6,6 +6,8 @@ import * as popup from "https://lib.deno.dev/x/denops_popup@2/mod.ts";
 
 type DenopsForPopup = Parameters<typeof popup.open>[0];
 
+const HEYVIM_BUFFER_NAME = "heyvim";
+
 /**
  * Opens the "heyvim" buffer in a new popup window.
  *
@@ -36,7 +38,7 @@ export async function showPopup(
  * @param denops - Denops instance for Vim/Neovim API interaction.
  */
 export async function closePopup(denops: Denops): Promise<void> {
-  const bufnr = await fn.bufnr(denops, "heyvim");
+  const bufnr = await fn.bufnr(denops, HEYVIM_BUFFER_NAME);
   if (bufnr < 0) return;
   for (const winid of await popup.list(denops as DenopsForPopup)) {
     if (bufnr === await fn.winbufnr(denops, winid)) {
@@ -72,7 +74,7 @@ export async function showWindow(
  * @param denops - Denops instance for Vim/Neovim API interaction.
  */
 export async function closeWindow(denops: Denops): Promise<void> {
-  const bufnr = await fn.bufnr(denops, "heyvim");
+  const bufnr = await fn.bufnr(denops, HEYVIM_BUFFER_NAME);
   if (bufnr < 0) return;
   for (const id of await fn.win_findbuf(denops, bufnr) as number[]) {
     await fn.win_execute(denops, id, "close");
@@ -80,7 +82,7 @@ export async function closeWindow(denops: Denops): Promise<void> {
 }
 
 async function initBuffer(denops: Denops): Promise<number> {
-  const bufnr = await fn.bufnr(denops, "heyvim", true);
+  const bufnr = await fn.bufnr(denops, HEYVIM_BUFFER_NAME, true);
   await batch(denops, async (denops) => {
     await option.buftype.setBuffer(denops, bufnr, "nofile");
     await option.buflisted.setBuffer(denops, bufnr, false);
