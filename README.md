@@ -47,6 +47,7 @@ Use these commands:
 
 - `:[range]Hey[!] {prompt}` - Edit text. With !, the text is replaced inplace.
 - `:HeyAbort` - Abort the current asynchronous operation.
+- `:HeyClose` - Close the Hey popup or window.
 
 See `:help hey-commands` for more information.
 
