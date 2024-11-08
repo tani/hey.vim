@@ -3,6 +3,10 @@ import { batch } from "jsr:@denops/std@7/batch";
 import * as fn from "jsr:@denops/std@7/function";
 import * as helper from "jsr:@denops/std@7/helper";
 import * as option from "jsr:@denops/std@7/option";
+import { buffer } from "jsr:@milly/streams@1/transform/buffer";
+import { filter } from "jsr:@milly/streams@1/transform/filter";
+import { map } from "jsr:@milly/streams@1/transform/map";
+import { interval } from "jsr:@milly/streams@1/readable/interval";
 import { outdent } from "npm:outdent@0.8.0";
 import { assert, is } from "jsr:@core/unknownutil@4";
 import { DEFAULT_SERVICE_TYPE, getConfig } from "./config.ts";
@@ -88,17 +92,23 @@ async function hey(
     config,
     { signal },
   );
+  const bufferedResults = results
+    .pipeThrough(buffer(interval(200)))
+    .pipeThrough(map((chunks) => chunks.join("")))
+    .pipeThrough(filter((chunk) => chunk.length > 0));
 
   let rest = "";
-  for await (const chunk of results) {
+  for await (const chunk of bufferedResults) {
     const lines = (rest + chunk).split("\n");
+    rest = lines.at(-1)!;
     await batch(denops, async (denops) => {
-      await fn.deletebufline(denops, bufnr, lnum);
-      await fn.appendbufline(denops, bufnr, lnum - 1, lines);
+      await fn.setbufline(denops, bufnr, lnum, lines[0]);
+      if (lines.length > 1) {
+        await fn.appendbufline(denops, bufnr, lnum, lines.slice(1));
+        lnum += lines.length - 1;
+      }
       await denops.cmd("redraw");
     });
-    lnum += lines.length - 1;
-    rest = lines.at(-1)!;
   }
 }
 
