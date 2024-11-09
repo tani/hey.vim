@@ -29,6 +29,12 @@ export type HeyConfig = {
    */
   messageStyle?: MessageStyle;
   /**
+   * The time interval in milliseconds at which the LLM stream output is written
+   * to the buffer.
+   * @default 200
+   */
+  updateTime?: number;
+  /**
    * Set the verbose mode.
    * @default false
    */

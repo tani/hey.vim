@@ -9,7 +9,11 @@ import { map } from "jsr:@milly/streams@1/transform/map";
 import { interval } from "jsr:@milly/streams@1/readable/interval";
 import { outdent } from "npm:outdent@0.8.0";
 import { assert, is } from "jsr:@core/unknownutil@4";
-import { DEFAULT_SERVICE_TYPE, getConfig } from "./config.ts";
+import {
+  DEFAULT_SERVICE_TYPE,
+  DEFAULT_UPDATE_TIME,
+  getConfig,
+} from "./config.ts";
 import { loadService } from "./service.ts";
 import type { HeyConfig } from "./types.ts";
 import { closePopup, closeWindow, showPopup, showWindow } from "./window.ts";
@@ -93,7 +97,7 @@ async function hey(
     { signal },
   );
   const bufferedResults = results
-    .pipeThrough(buffer(interval(200)))
+    .pipeThrough(buffer(interval(config.updateTime ?? DEFAULT_UPDATE_TIME)))
     .pipeThrough(map((chunks) => chunks.join("")))
     .pipeThrough(filter((chunk) => chunk.length > 0));
 
