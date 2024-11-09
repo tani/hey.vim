@@ -85,6 +85,13 @@ g:hey_message_style
 
 		Default: "window"
 
+							 *g:hey_update_time*
+g:hey_update_time
+		The time interval in milliseconds at which the LLM stream
+		output is written to the buffer.
+
+		Default: 200
+
 							       *g:hey_verbose*
 g:hey_verbose
 		Set the verbose mode.
